@@ -1,0 +1,187 @@
+<script
+  src="https://code.jquery.com/jquery-3.4.1.min.js"
+  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+  crossorigin="anonymous"></script>
+<style>
+    body {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .combobox-container {
+        height: 40px;
+        width: 50%;
+    }
+    .select-editable {
+        display: flex;
+        height: 100%;
+    }
+    .dropdown-searchbar {
+        height: 100%;
+        width: calc(100% - 40px);
+    }
+    .select-editable input {
+        width: 100%;
+        height: 100%;
+        margin: none;
+        border-width: 1px;
+        box-sizing: border-box;
+        font-size: 14px;
+    }
+    .select-editable button {
+        width: 40px;
+        height: 100%;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    .item-list {
+        margin: 0;
+        border: 1px solid black;
+        max-height: 200px;
+        padding: 0;
+        list-style: none;
+        overflow: scroll;
+        position: relative;
+    }
+    .item-list li {
+        min-height: 20px;
+        max-height: 20px;
+        padding-left: 5px;
+        vertical-align: middle;
+        width: 100%;
+    }
+    .item-list li:hover {
+        background-color: rgba(0,0,0,0.2);
+    }
+    .list-count-container {
+        border: 1px solid black;
+        border-top: none;
+        text-align: center;
+    }
+    .active {
+        display: block;
+    }
+    .inactive {
+        display: none;
+    }
+</style>
+<script>
+    const fetchListData = (scrolled, query, fetchList) => {
+        console.log("here");
+        if(scrolled || query || fetchList) {
+            $.ajax({
+                url: "/api/randomlist",
+                dataType: "json",
+                data: {
+                    query: query
+                },
+                success: function(data){
+                    console.log(data);
+                    if(!scrolled && !query) {
+                        var list = document.createElement("ul");
+                        list.setAttribute("class", "item-list");
+                        list.setAttribute("data-itemCount", data.list.length);
+                        list.setAttribute("data-maxCount", data.listCount)
+                        list.addEventListener("scroll", infiniteScroll);
+                        var listCount = document.createElement("div");
+                        listCount.setAttribute("class", "list-count-container")
+                        listCount.innerHTML = `Items <span class="list-count">${data.list.length}</span> of ${data.listCount}`;
+                    } else if (query) {
+                        var list = document.querySelector(".query-container ul");
+                    } else {
+                        let listCount = document.querySelector(".item-list");
+                        listCount.dataset.itemcount = Number(listCount.dataset.itemcount) + data.list.length;
+                        $(".list-count").text(listCount.dataset.itemcount);
+                    }
+                    data.list.forEach(item => {
+                        let listItem = document.createElement("li");
+                        listItem.innerText = item.item;
+                        listItem.addEventListener("mousedown", itemSelect);
+                        if(scrolled) document.querySelector(".list-container .item-list").append(listItem);
+                        else list.appendChild(listItem);
+                    })
+                    if(query) {
+                        if(!data.list.length) $(list).append("<li>No results found</li>");
+                        list.removeChild(list.firstElementChild);
+                        $(".query-container").append(list).addClass("active").removeClass("inactive");
+                    }
+                    else $(".list-container").append(list).append(listCount).addClass("active").removeClass("inactive");
+                },
+                error: function() {
+                    console.log("an error has occured");
+                }
+            })
+        } else {
+            $(".query-container ul").empty().addClass("inactive").removeClass("active");
+            $(".list-container").removeClass("inactive").addClass("active");
+        }
+    }
+    function showDropdown(focusedDom) {
+        let shouldFetch = $(focusedDom).closest(".select-editable").siblings(".list-container").children().length;
+        if(shouldFetch) {
+            $(".list-container").addClass("active").removeClass("inactive");
+        } else {
+            console.log("fetching");
+            fetchListData(null, null, true);
+        }
+    }
+    const focusInput = (btndom) => {
+        if(btndom.dataset.called == "1"){
+            btndom.dataset.called = "0";
+            document.querySelector(".ondemandinput").focus();
+        }
+    }
+
+    const collapseDropdown = () => {
+        $(".ondemandinput").val($("input[type='hidden']").val());
+        $(".list-container").addClass("inactive").removeClass("active");
+        $(".query-container").addClass("inactive").removeClass("active");
+    }
+
+    function itemSelect () {
+        $("input[type='hidden']").val($(this).text());
+        collapseDropdown();
+    }
+    
+    function infiniteScroll () {
+        if(Number(this.dataset.itemcount) == Number(this.dataset.maxcount)) return;
+        if(this.scrollHeight - this.scrollTop == 200) fetchListData(true);
+    }
+
+    const autocompleteList = text => {
+        if(text == "") {
+            $(".query-container ul").empty().append("<li>Enter your query</li>");
+            return;
+        } else {
+            $(".query-container ul").empty().append("<li>Searching...</li>");
+            searchList(text);
+        }
+    }
+
+    const searchList = query => {
+        $(".list-container").removeClass("active").addClass("inactive");
+        $(".query-container").addClass("active").removeClass("inactive");
+        fetchListData(null, query);
+    }
+    $(document).ready(() => $(".ondemandinput").val($("input[type='hidden']").val()));
+</script>
+<body>
+    <div class="combobox-container">
+        <div class="select-editable">
+            <div class="dropdown-searchbar">
+                <input class="ondemandinput" type="text" oninput="autocompleteList(this.value)" onfocus="showDropdown(this)" onblur="collapseDropdown()" value="">
+            </div>
+            <button class="ondemandbtn" data-called="1" onclick="focusInput(this)"></button>
+        </div>
+        <div class="list-container inactive">
+        </div>
+        <div class="query-container inactive">
+            <ul class="item-list">
+                <li>Enter your query</li>
+            </ul>
+        </div>
+        <input type="hidden" value="Carol">
+    </div>
+</body>

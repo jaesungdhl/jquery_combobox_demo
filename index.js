@@ -11,10 +11,10 @@ app.get("/", (req,res) => res.render(`${__dirname}/views/index`));
 
 app.get("/api/randomlist", (req,res) => {
     let randomJSON = {
-        listCount: 300,
+        listCount: 10000,
         list: [],
     };
-    let maximumCount = 300;
+    let maximumCount = 10000;
     let trial = 0;
     let itemCount = 0;
     while(itemCount < 50) {

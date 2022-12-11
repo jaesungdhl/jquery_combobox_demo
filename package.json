@@ -16,7 +16,7 @@
   "dependencies": {
     "babel-node": "0.0.1-security",
     "ejs": "^3.0.1",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "localtunnel": "^2.0.0",
     "nodemon": "^2.0.2",
     "search-engine": "^1.1.0"
